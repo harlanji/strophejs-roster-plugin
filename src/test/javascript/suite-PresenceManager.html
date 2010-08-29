@@ -1,14 +1,20 @@
 <html>
 	<head>
-		<title>JSUnit - RosterWindowTest</title>
-		<script language="javascript" src="app/jsUnitCore.js"></script>
-		
-                <script type="text/javascript" src="includes.js"></script>
-		<script type="text/javascript" src="common-test-library.js"></script>
-		
+		<title>Presence Manager Tests</title>
+		<script type="text/javascript" src="lib/qunit/qunit.js"></script>
+
+		<script type="text/javascript" src="lib/jquery/jquery.js"></script>
+		<script type="text/javascript" src="lib/strophejs/strophe.js"></script>
+
+		<script type="text/javascript" src="PresenceManager.js"></script>
+
+
+		<script type="text/javascript" src="jsunit-qunit-adapter.js"></script>
 	</head>
 	<body>
 		<script type="text/javascript">
+
+(function() {
 
 var JID = "somebody@somewhere.com";
 var RESOURCE1 = "resource1";
@@ -19,94 +25,99 @@ var PRIORITY_LOW = 1;
 
 var pm;
 
-function setUp() {
-	pm = new Xmpp4Js.Roster.PresenceManager();
-}
-
-function tearDown() {
-	pm = null;
-}
+module("Presence Manager", {
+	setup: function() {
+		pm = new PresenceManager();
+	},
+	teardown: function() {
+		pm = null;
+	}
+});
 
 function presenceFrom(type, from, show, status, priority) {
-        var pres = new Xmpp4Js.Packet.Presence(type, "local@somewhere.com", status, show, priority);
-        pres.setFrom( from );
-	
-        return pres;
+    return $pres({
+		type: type, 
+		to: "me@example.com/home", 
+		status: status, 
+		show: show, 
+		priority: priority,
+		from: from
+	}).tree();
 }
 
-function testPresenceAdd() {
+test("testPresenceAdd", function() {
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE1, "", "", PRIORITY_HIGH) );
 
 	var presence = pm.get(JID, RESOURCE1);
 	assertNotNull( presence );
-	assertEquals( "available", presence.getType() );
+	assertEquals( "available", $(presence).attr("type") );
 
-}
+});
 
-function testPresenceChange() {
+test("testPresenceChange", function() {
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE1, "", "", PRIORITY_HIGH) );
 	pm.update( presenceFrom("unavailable", JID+"/"+RESOURCE1, "", "", PRIORITY_HIGH) );
 	
 	var presence = pm.get(JID, RESOURCE1);
 	assertNotNull( presence );
-	assertEquals( "unavailable", presence.getType() );
-}
+	assertEquals( "unavailable", $(presence).attr("type")) );
+});
 
-function testPresenceGetBestType() {
+test("testPresenceGetBestType", function() {
 	pm.update( presenceFrom("unavailable", JID+"/"+RESOURCE1, "", "", PRIORITY_HIGH) );
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE2, "", "", PRIORITY_HIGH) );
 	
 	var presence = pm.getBest(JID);
 	assertNotUndefined( presence );
-	assertEquals( RESOURCE2, presence.getFromJid().getResource() );
-}
+	assertEquals( RESOURCE2, Strophe.getResourceFromJid($(presence).attr("from")) );
+});
 
-function testPresenceGetBestPriority() {
+test("testPresenceGetBestPriority", function() {
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE1, "", "", PRIORITY_LOW) );
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE2, "", "", PRIORITY_HIGH) );
 	
 	var presence = pm.getBest(JID);
 	assertNotUndefined( presence );
-	assertEquals( RESOURCE2, presence.getFromJid().getResource() );
-}
+	assertEquals( RESOURCE2, Strophe.getResourceFromJid($(presence).attr("from")) );
+});
 
-function testPresenceGetBestShowChatGTNormal() {
+test("testPresenceGetBestShowChatGTNormal", function() {
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE1, "", "", PRIORITY_HIGH) );
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE2, "chat", "", PRIORITY_HIGH) );
 	
 	var presence = pm.getBest(JID);
 	assertNotUndefined( presence );
-	assertEquals( RESOURCE2, presence.getFromJid().getResource() );
-}
+	assertEquals( RESOURCE2, Strophe.getResourceFromJid($(presence).attr("from")) );
+});
 
-function testPresenceGetBestShowNormalGTAway() {
+test("testPresenceGetBestShowNormalGTAway", function() {
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE1, "away", "", PRIORITY_HIGH) );
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE2, "", "", PRIORITY_HIGH) );
 	
 	var presence = pm.getBest(JID);
 	assertNotUndefined( presence );
-	assertEquals( RESOURCE2, presence.getFromJid().getResource() );
-}
+	assertEquals( RESOURCE2, Strophe.getResourceFromJid($(presence).attr("from")) );
+});
 
-function testPresenceGetBestShowAwayGTXa() {
+test("testPresenceGetBestShowAwayGTXa", function() {
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE1, "xa", "", PRIORITY_HIGH) );
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE2, "away", "", PRIORITY_HIGH) );
 	
 	var presence = pm.getBest(JID);
 	assertNotUndefined( presence );
-	assertEquals( RESOURCE2, presence.getFromJid().getResource() );
-}
+	assertEquals( RESOURCE2, Strophe.getResourceFromJid($(presence).attr("from")) );
+});
 
-function testPresenceGetBestShowXaGTDnd() {
+test("testPresenceGetBestShowXaGTDnd", function() {
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE1, "dnd", "", PRIORITY_HIGH) );
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE2, "xa", "", PRIORITY_HIGH) );
 	
 	var presence = pm.getBest(JID);
 	assertNotUndefined( presence );
-	assertEquals( RESOURCE2, presence.getFromJid().getResource() );
-}
+	assertEquals( RESOURCE2, Strophe.getResourceFromJid($(presence).attr("from")) );
+});
 
-function testPresenceRemoveSingleResource() {
+test("testPresenceRemoveSingleResource", function() {
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE1, "", "", PRIORITY_HIGH) );
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE2, "", "", PRIORITY_HIGH) );
 	
@@ -117,9 +128,9 @@ function testPresenceRemoveSingleResource() {
 	
 	presence = pm.get(JID, RESOURCE2 );
 	assertNotUndefined( presence );
-}
+});
 
-function testPresenceRemoveAll() {
+test("testPresenceRemoveAll", function() {
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE1, "", "", PRIORITY_HIGH) );
 	pm.update( presenceFrom("available", JID+"/"+RESOURCE2, "", "", PRIORITY_HIGH) );
 	
@@ -130,10 +141,10 @@ function testPresenceRemoveAll() {
 	
 	presence = pm.get(JID, RESOURCE2 );
 	assertUndefined( presence );
-}
+});
 
 
-function testEventChange() {
+test("testEventChange", function() {
     var presence1 = "available";
     var presence2 = "unavailable";
     
@@ -150,9 +161,9 @@ function testEventChange() {
     pm.update( presenceFrom(presence2, JID+"/"+RESOURCE1, "", "", PRIORITY_HIGH) );
 
     assertEquals( 2, updateCount );	
-}
+});
 
-function testEventChange() {
+test("testEventChange", function() {
     var presence1 = "available";
     var presence2 = "unavailable";
 
@@ -170,12 +181,12 @@ function testEventChange() {
     pm.update( presenceFrom(presence2, JID+"/"+RESOURCE1, "", "", PRIORITY_HIGH) );
 
     assertEquals( 1, updateCount );	
-}
+});
 
 /**
  * Make sure presence on jid/resource2 doesn't affect presence on jid/resource1
  */
-function testPresenceChangeOnDifferentResources() {
+test("testPresenceChangeOnDifferentResources", function() {
     var presence1 = "available";
     var presence2 = "unavailable";
 
@@ -197,14 +208,14 @@ function testPresenceChangeOnDifferentResources() {
     pm.update( presenceFrom(presence2, JID+"/"+RESOURCE2, "", "", PRIORITY_HIGH) );
 
     assertEquals( 1, updateCount );
-}
+});
 
 /**
  * Test that presence types aside from available and unavailable are not handled
  */
-function testSetInvalidPresenceType() {
+test("testSetInvalidPresenceType", function() {
 	
-}
+});
 
 //function testEventRemove() {
 //    var updateCount = 0;;
@@ -223,11 +234,9 @@ function testSetInvalidPresenceType() {
 //    assertEquals( 1, updateCount );    
 //}
 
+})();
+
 
 		</script>
 	</body>
 </html>
-
-
-
-

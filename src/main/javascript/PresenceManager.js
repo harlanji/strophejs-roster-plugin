@@ -1,9 +1,15 @@
-Xmpp4Js.Lang.namespace( "Xmpp4Js.Roster" );
+(function() {
+
+/*
+	FIXME addEvents and fireEvents do not exist, and .on does not exist. these
+		  are left behind from ExtJS days. I might have made something like this
+		  for OSW already.
+*/
 
 /**
  * @constructor
  */
-Xmpp4Js.Roster.PresenceManager = function() {
+PresenceManager = function() {
     /**
      * Map by jid => resource
      */
@@ -13,15 +19,15 @@ Xmpp4Js.Roster.PresenceManager = function() {
      */
     this.best = {};
     
-    this.getBestImpl = new Xmpp4Js.Roster.PresenceManager.GetBestImpl();
+    this.getBestImpl = new PresenceManager.GetBestImpl();
 
-    this.addEvents({
+    /*this.addEvents({
         update: true
-    });
+    });*/
     
 }
 
-Xmpp4Js.Roster.PresenceManager.prototype = {
+PresenceManager.prototype = {
 
     /**
      * Set presence based on jid and resource, and clear best presence cache.
@@ -29,10 +35,10 @@ Xmpp4Js.Roster.PresenceManager.prototype = {
      * @param {Xmpp4Js.Packet.Presence} newPresence
      */
     update: function(newPresence) {
-        var jid = newPresence.getFromJid().withoutResource().toString();
-        var resource = newPresence.getFromJid().getResource();
+        var jid = Strophe.getBareJidFromJid( jQuery(newPresence).attr("from") );
+        var resource = Strophe.getResourceFromJid( jQuery(newPresence).attr("from") );
         
-        var type = newPresence.getType();
+        var type = jQuery(newPresence).attr("type");
         
         if(type != "available" && type != "unavailable") {
             throw new Error("Invalid prsence type: " + type);
@@ -45,7 +51,7 @@ Xmpp4Js.Roster.PresenceManager.prototype = {
         this.map[jid][resource] = newPresence;
         
         // fire the update event.
-        this.fireEvent( "update", newPresence );
+        //this.fireEvent( "update", newPresence );
         
         delete this.best[jid];
     },
@@ -97,7 +103,7 @@ Xmpp4Js.Roster.PresenceManager.prototype = {
         } else {
             if( this.map[jid][resource] == undefined ) { return; }
             
-            this.fireEvent( "remove", this.map[jid][resource] );
+            //this.fireEvent( "remove", this.map[jid][resource] );
             delete this.map[jid][resource]; 
         }
     },
@@ -117,18 +123,17 @@ Xmpp4Js.Roster.PresenceManager.prototype = {
     }
 }
 
-Xmpp4Js.Lang.extend(Xmpp4Js.Roster.PresenceManager, Xmpp4Js.Event.EventProvider, Xmpp4Js.Roster.PresenceManager.prototype);
 
 
 
 /**
  * @constructor
  */
-Xmpp4Js.Roster.PresenceManager.GetBestImpl  = function() {
+PresenceManager.GetBestImpl  = function() {
 
 }
 
-Xmpp4Js.Roster.PresenceManager.GetBestImpl.prototype = {
+PresenceManager.GetBestImpl.prototype = {
 
     SHOW_WEIGHT: {
         chat: 6,
@@ -157,9 +162,9 @@ Xmpp4Js.Roster.PresenceManager.GetBestImpl.prototype = {
             var presence = presenceList[k];
             
             // these return default values if empty.
-            var show = presence.getShow();
-            var type = presence.getType();
-            var priority = presence.getPriority();
+            var show = jQuery(presence).attr("show");
+            var type = jQuery(presence).attr("type")
+            var priority = jQuery(presence).attr("priority")
 
             // calculate the weight of the presence for getBest
             var weight = this.SHOW_WEIGHT[show] * this.TYPE_WEIGHT[type] * priority;
@@ -177,3 +182,5 @@ Xmpp4Js.Roster.PresenceManager.GetBestImpl.prototype = {
         return bestPresence;
     }
 }
+
+})();
